@@ -22,7 +22,7 @@ def readData(file, path):
 
 def saveData(totalTraffic,totalData, file):
     ## Saves trafficData to a txt file
-    fileSaveTo = open("TotalHourlyTraffic2.csv","a")
+    fileSaveTo = open("TotalHourlyTraffic.csv","a")
     fileNameSplit = file.split("-")
     currDate = fileNameSplit[1] + "-" + fileNameSplit[2][0] + fileNameSplit[2][1] 
     currDateFormatted = currDate[0:4] + "-" +currDate[4:6] + "-" + currDate[6:]
@@ -35,7 +35,7 @@ def saveData(totalTraffic,totalData, file):
 
 def checkIfDataExists(date):
     ## If Data already exists dont overwrite
-    existingLines = open("TotalHourlyTraffic2.csv","r").readlines()
+    existingLines = open("TotalHourlyTraffic.csv","r").readlines()
     for line in existingLines:
         lineList = line.split(',')
         if date == lineList[0]:

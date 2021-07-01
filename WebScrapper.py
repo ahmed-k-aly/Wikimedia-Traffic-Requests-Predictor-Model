@@ -6,14 +6,19 @@ def main():
     URLList = getURLs(2008, 2009)
     dataSetURLs = getDataSetURLs(URLList)
     downloadData(dataSetURLs)
-    
 
 def downloadData(dataSetURLs, fileLocation='C:/Users/nitro/Downloads/Data/'):
+    keepGoing = False
     for url in dataSetURLs:
+        str = url.split('/')[-1]
+        print(str)
+#        x = str.split('-')[1] + str.split('-')[-1]
+        # if (x[:10] == "10509"):
+        #     keepGoing = True
+        # if (keepGoing):
         r = requests.get(url, allow_redirects=True)
-        print(url.split('/')[-1])
         with open(fileLocation + url.split('/')[-1], 'wb') as f:
-             f.write(r.content)
+            f.write(r.content)
 
 
 def getDataSetURLs(URLList):
@@ -28,8 +33,6 @@ def getDataSetURLs(URLList):
             continue
         finalLink = URL + link
         dataSet.append(finalLink)
-        # with open('C:/Users/nitro/Downloads/Data/' + link, 'wb') as f:
-        #      f.write(r.content)    
     return dataSet
 
 
@@ -37,7 +40,7 @@ def getURLs(firstYear, endYear):
     #returns all the URLs from the first year(inclusive) to the end year(exclusive) in a list 
     list = deque()
     year = firstYear
-    month = 6
+    month = 0
     while (year < endYear):
         month = 1 + (month % 12)
         stringMonth = str(month)
