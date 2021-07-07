@@ -1,8 +1,12 @@
+from numpy.core.numeric import NaN
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
 from datetime import datetime
+from pandas._libs.tslibs.timestamps import Timestamp
 from pandas.plotting import register_matplotlib_converters
+from scipy.sparse import data
 from statsmodels.tsa.stattools import acf, pacf
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from pmdarima import auto_arima
@@ -13,33 +17,47 @@ register_matplotlib_converters()
 
 
 def main():
-    dataFrame = getData()
+    dataFrame = getData().Requests
+    #dataFrame = normalizeData(dataFrame)
     newSARIMA(dataFrame)
 
 def getTrainingTestingData(dataFrame):
-    train_end = datetime(2008,1,8, hour=0)
-    test_end = datetime(2008,1,12, hour=1)
+    train_end = datetime(2009,9,1)
+    test_end = datetime(2010,12,31)
     trainData = dataFrame[:train_end]
     testData = dataFrame[train_end:test_end]
     return trainData, testData
 
 
 
-def visualizeData(dataFrame):
-    plotDatas(dataFrame, 2008, 1, 1, 0, 2008, 1, 12, 1)
-    avg, dev = dataFrame.mean(), dataFrame.std()
-    dataFrame = (dataFrame - avg) / dev
-    plt.show()
-    #dataFrame= np.log(dataFrame)
-    dataFrame = dataFrame.diff().dropna()
-    plt.figure(figsize=[15, 7.5]); # Set dimensions for figure
-    plt.plot(dataFrame)
-    plt.title("Log Difference of Number of Requests")
+def normalizeData(dataset):
+    avg = dataset.mean()
+    dev = dataset.std()
 
-    dataFrame = dataFrame.diff(24).dropna() # Seasonal Diff
+    normalizedDataset = (dataset - avg) / dev
+    
+    return normalizedDataset
+
+
+def deNormalizeData(dataset):
+    avg = dataset.mean()
+    dev = dataset.std()
+
+
+    normalDS = (dataset * dev) + avg
+    return normalDS
+
+def visualizeData(dataFrame):
+    plotDatas(dataFrame, 2009, 1, 1, 0, 2009, 12, 31, 23)
+    dataFrame = dataFrame.diff().dropna()
+    #plt.figure(figsize=[15, 7.5]); # Set dimensions for figure
+    #plt.plot(dataFrame)
+    #plt.title(" Difference of Number of Requests")
+
+    dataFrame = dataFrame.diff(7).dropna() # Seasonal Diff
     plt.figure(figsize=[15, 7.5]); # Set dimensions for figure
     plt.plot(dataFrame)
-    plt.title("Log Difference of Number of Requests after Seasonal Diff")
+    plt.title("Difference of Number of Requests after Seasonal Diff")
 
     plot_pacf(dataFrame)
     plot_acf(dataFrame)
@@ -53,21 +71,38 @@ def newSARIMA(dataFrame):
     and outputs a predicted vs actual data graph
     """
 
-    #visualizeData(dataFrame)
     trainData, testData = getTrainingTestingData(dataFrame)
+    #visualizeData(trainData)
     modelFit = runModel(trainData)
-    #TODO: Add a robust anomaly detection algorithm, possibly STL algo
+    #TODO: Add a robust anomaly detection algorithm, possibly STL algorithm
     predictions = getPredictions(testData, modelFit)
+    #predictions = deNormalizeData(predictions)
+    #dataFrame = deNormalizeData(dataFrame)
     residuals = testData - predictions # Value of errors
     print('Mean Absolute Percent Error:', round(np.mean(abs(residuals/testData)),4))
-    makeFinalPlot(dataFrame, predictions)
+    rolling_predictions = predictions
+    counter = 0
+    for train_end in testData.index:
+        counter += 1
+        if (counter % 1 == 0):
+            pass
+        else:
+            continue
+        train_data = dataFrame[:train_end]
+        model = SARIMAX(train_data, order=(1,0,1), seasonal_order=(0,1,2,7))
+        model_fit = model.fit()
+        pred = model_fit.forecast()
+        rolling_predictions[train_end] = pred
+
+
+    makeFinalPlot(dataFrame, rolling_predictions)
 
 
 def makeFinalPlot(dataFrame, predictions):
     plt.figure(figsize=(10,4))
 
-    start_date = datetime(2008,1,1,hour=0)
-    end_date = datetime(2008,1,12,hour=1)
+    start_date = datetime(2009,1,1)
+    end_date = datetime(2010,12,31)
 
     plt.plot(dataFrame)
     plt.plot(predictions)
@@ -81,13 +116,19 @@ def makeFinalPlot(dataFrame, predictions):
     plt.show()
 
 
+
+
+
+
 def runModel(dataFrame):
     """
     Method that creates a SARIMA model on the passed
     dataset and fits the model to the data.
     Returns the fitted model.
     """
-    model = SARIMAX(dataFrame, order= (1,1,1), seasonal_order = (3,1,3,24))
+    #orders = getSARIMA_order(dataFrame, 7)
+    orders = [(1,0,1), (0,1,2,7)]
+    model = SARIMAX(dataFrame, order= orders[0], seasonal_order = orders[1])
     modelFit = model.fit()
     print(modelFit.summary())
     return modelFit
@@ -132,7 +173,7 @@ def plotResiduals(residuals):
 
 
 def plotDatas(data,
-    start_year = 2008, start_month = 1, start_day = 1, start_hr=0, end_year=2008, end_month = 1, end_day= 5, end_hr = 7):
+    start_year = 2008, start_month = 1, start_day = 1, start_hr=0, end_year=2010, end_month = 12, end_day= 5, end_hr = 7):
     """
     Method that plots the passed data with respect to the
     x-axis being between the passed starting dates and end dates.
@@ -143,11 +184,11 @@ def plotDatas(data,
     end_date = datetime(end_year,end_month,end_day,hour=end_hr)
     dataRange = data[start_date:end_date]
     plt.figure(figsize=(10,4))
-    plt.plot(dataRange)
+    plt.plot(data)
     plt.title('Daily Wikimedia Requests in Tens of Millions', fontsize=20)
     plt.ylabel('Requests', fontsize=16)
-    for day in range(start_date.day,end_date.day+1):
-        plt.axvline(pd.to_datetime(str(start_year) + '-' + str(start_month) + '-' + str(day)) , color='k', linestyle='--', alpha=0.2)
+    #for month in range(start_date.month,end_date.month+1):
+     #   plt.axvline(pd.to_datetime(str(start_year) + '-' + str(month)) , color='k', linestyle='--', alpha=0.2)
     plt.axhline(0, color='k', linestyle='--', alpha=0.2)
     plt.show()
 
@@ -156,12 +197,14 @@ def parser(string):
     return datetime.strptime(string, '%Y-%m-%d-%H')
 
 
-def getSARIMA_order(data):
+def getSARIMA_order(data, m):
     """
-    Helper method that returns THE SARIMA order
+    Helper method that takes the data and the seasonal interval, m. 
+    It returns THE SARIMA order as a list of
+    Tuples of [(Arima Order)][(Seasonal order)]
 
     """
-    model = auto_arima(data, m = 24, seasonal = True,  error_action='ignore')
+    model = auto_arima(data, m = m, seasonal = True,  error_action='ignore')
     
     return [model.order, model.seasonal_order]
 
@@ -176,11 +219,33 @@ def getPredictions(testData, modelFit):
     return pd.Series(predictions, index=testData.index)
 
 
-def getData():
-    col_list = ["Date","Number of Requests"]
-    dataFrame = pd.read_csv("TotalHourlyTraffic.csv", parse_dates=[0], index_col = 0, squeeze=True, date_parser=parser)
-    return dataFrame.asfreq(pd.infer_freq(dataFrame.index))
 
+def getData():
+    d_parser = lambda x: datetime.strptime(x, '%Y-%m-%d-%H')
+    df = pd.read_csv("new.csv", parse_dates = ['Date'], date_parser = d_parser)
+    df = df.resample('D', on='Date').Requests.sum()
+    df = pd.DataFrame({'Date':df.index, 'Requests':df.values})
+
+    df.set_index('Date', inplace=True)
+    idx = pd.date_range("2009-01-01", "2010-12-31", freq = 'D')    
+    df = df.reindex(idx, method='nearest', fill_value=NaN)
+    for value in df['Requests']:
+        if value == 0:
+            value = NaN
+    return df
+
+# def getData():
+#     col_list = ["Date","Requests","DataSent"]
+#     d_parser = lambda x: pd.datetime.strptime(x, '%Y-%m-%d %I-%p')
+
+#     dataFrame = pd.read_csv("new.csv", parse_dates=[0], index_col = 0, squeeze=True, date_parser=parser)
+    
+#     dataFrame.asfreq(pd.infer_freq(dataFrame.index))
+#     dataFrame.fillna(method='bfill')
+#     # dataFrame.index = pd.DatetimeIndex(dataFrame.index)
+#     print(dataFrame)
+#     quit()
+    # return dataFrame
 
 
 
