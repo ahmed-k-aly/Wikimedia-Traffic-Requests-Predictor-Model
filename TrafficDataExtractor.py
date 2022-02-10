@@ -1,12 +1,16 @@
+""" 
+Extradcts the data from gzips into a mega CSV file
+"""
+
 import os
 import gzip
 import sys
 
-def main():
-    pass
 
-
-def extractData(fileName):    
+def extractData(fileName):
+    """ 
+    Extracts the data from all the gzips into a big csv files 
+    """    
     if os.path.exists(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName)):
         file = gzip.open(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName),mode='rt')
     else:
@@ -58,23 +62,18 @@ def checkIfDataExists(date):
 
 
 def removeFile(fileName):
-    try:
-        if os.path.exists(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName)):
-            os.remove(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName))
-            return True
-        else:
-            print("The file does not exist")
-            return False
-    except:
-        e = sys.exc_info()[0]
-        if os.path.exists(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName)):
-            os.remove(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName))
-            return True
-        else:
-            print(e)
-            return False
-
-
-
-if __name__=='__main__':
-    main()
+    while True:
+        try:
+            if os.path.exists(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName)):
+                os.remove(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName))
+                return True
+            else:
+                print("The file does not exist")
+                return False
+        except:
+            e = sys.exc_info()[0]
+            if os.path.exists(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName)):
+                os.remove(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName))
+                return True
+            else:
+                print(e)

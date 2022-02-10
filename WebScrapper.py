@@ -1,5 +1,8 @@
+""" 
+Downloads the data from wikimnedia and extracts it into a CSV file using multithreading
+"""
+
 import functools
-import html2text
 import os
 import sys
 import threading
@@ -13,14 +16,17 @@ import hashlib
 hashDictionary = {}
 
 def main():
-    URLList = getURLs(2009, 2012)
+    URLList = getURLs(2010, 2012)
     dataSetURLs = getDataSetURLs(URLList)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+    with concurrent.futures.ThreadPoolExecutor() as executor:
         executor.map(getData, dataSetURLs)
-    print("Done!")
 
 
 def getData(url):
+    """  
+    Downloads the data from wikimedia then 
+    extracts the data into csv files
+    """
     count = 0
     while True:
         count += 1
@@ -29,18 +35,19 @@ def getData(url):
             break
         try:
             fileName = url.split('/')[-1]
-            downloadData(url)
-            extractData(fileName)
+            downloadData(url) # downloads the data
+            extractData(fileName) # extracts the data from downloaded files
             break
         except: # catch *all* exceptions
             pass
+
 
 def removeFile(fileName):
     """ 
     Method that removes the downloaded file
     """
     try:
-        if os.path.exists(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName)):
+        if os.path.exists(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName)): # directory to download the data in
             os.remove(r'C:\Users\nitro\Downloads\Data\{}'.format(fileName))
             return True
         else:
@@ -58,18 +65,20 @@ def removeFile(fileName):
 
 def downloadData(url, fileLocation='C:/Users/nitro/Downloads/Data/'):
     """ 
-    Method that takes a url and a fileLocation. It then downloads the 
-    url and saves it into the passed file location
+    Method that takes a url and a fileLocation.
+    It then downloads the url, checks if hashes match. 
+    If so, it saves the file into the passed file location. 
+    If not, it deletes the file and then tries downloading it. 
     """
     fileName = url.split('/')[-1]
     fileNewAddress = fileLocation + fileName
-    hash = getHash(fileName)
+    hash = getHash(fileName) # get file hash
     while True:
         r = requests.get(url, allow_redirects=True)
         with open(fileNewAddress, 'wb') as f:
             f.write(r.content)
         hash = hashlib.md5(open(fileNewAddress,'rb').read()).hexdigest()
-        if (hash == hashDictionary[fileName]):
+        if (hash == hashDictionary[fileName]): # compare md5 checksums
             print("Perfect Hash Match")
             break
         else:
@@ -78,6 +87,9 @@ def downloadData(url, fileLocation='C:/Users/nitro/Downloads/Data/'):
 
 
 def putHashesIntoDict(hashLink):
+    """ 
+    Organizes all the hashes into a hashtable with pageNames as key
+    """
     page = requests.get(hashLink)
     soup = BeautifulSoup(page.content, 'html.parser')
     text = soup.get_text().splitlines()
@@ -89,7 +101,11 @@ def putHashesIntoDict(hashLink):
 
 
 def getHash(fileName):
+    """ 
+    Gets the hashes of the file
+    """
     return hashDictionary[fileName]        
+
 
 def getDataSetURLs(URLList):
     dataSet = deque()
@@ -115,7 +131,7 @@ def getURLs(firstYear, endYear):
     
     list = deque()
     year = firstYear
-    month = 9
+    month = 8
     while (year < endYear):
         month = 1 + (month % 12)
         stringMonth = str(month)
